@@ -1,0 +1,47 @@
+services:
+
+  auth:
+    build:
+      context: .
+      args:
+        ENV: ${ENV:-dev}
+    image: auth:${ENV:-dev}
+    container_name: auth-service-${ENV:-dev}
+    ports:
+      - "${APP_PORT:-8081}:8081"
+    env_file:
+      - ./config/.env.${ENV:-dev}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    volumes:
+      - ./src/main/resources:/auth/src/main/resources
+
+  db:
+    image: postgres:13-alpine
+    container_name: auth-db-${ENV:-dev}
+    env_file:
+      - ./config/.env.${ENV:-dev}
+    volumes:
+      - pgdata-${ENV:-dev}:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5433" 
+    command: -p 5433
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p 5433"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    external: true
+
+volumes:
+  pgdata-dev:
+  pgdata-staging:
+  pgdata-prod:
